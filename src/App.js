@@ -6,7 +6,12 @@ import { CSSTransition } from 'react-transition-group';
 import { publicProvider } from 'wagmi/providers/public'
 import Modal from 'react-modal'
 import Lottie from 'react-lottie';
+import { useAccount, useConnect, useDisconnect } from 'wagmi'
+import { Buffer } from 'buffer'
+
 import Profile from './Profile'
+import Account from './Account'
+import {contract} from "./ValidateTicket";
 import * as tickAnimation from './lottie/tick.json'
 import * as errorAnimation from './lottie/error.json'
 const buttonStyle = {
@@ -15,7 +20,10 @@ const buttonStyle = {
 };
 
 
-
+// polyfill Buffer for client
+if (!window.Buffer) {
+    window.Buffer = Buffer
+}
 
 // Configure chains & providers with the Alchemy provider.
 // Two popular providers are Alchemy (alchemy.com) and Infura (infura.io)
@@ -52,12 +60,42 @@ const errorOptions = {
     }
 }
 const Home = () => {
-    const [data, setData] = useState({});
     const [isOpen, setOpen] = useState(false);
     const [isPaused, setPaused] = useState(false);
     const [isStopped, setStopped] = useState(false);
     const [isNftOwner, setNftOwner] = useState(true);
+    const [address, setAddress] = useState('');
     const toggleModal = () => setOpen(!isOpen);
+
+
+    const checkNfts = async (address) => {
+        const res = await contract.balanceOfBatch([address, address], ['36567795427009012407374235082263121169480817132740453451039498777278430576680', '36567795427009012407374235082263121169480817132740453451039498778377942204446'])
+        if (res[0].toNumber() + res[1].toNumber() > 0) {
+            setNftOwner(true);
+            setOpen(true);
+        } else {
+            setNftOwner(false);
+            setOpen(true);
+        }
+    }
+
+    const onScan = (result, error) => {
+        if (!!result) {
+            if (!!result.text) {
+                if (result.text.length === 42) {
+                    let address = result.text
+                    checkNfts(address);
+                    setAddress(address)
+                } else if (result.text.slice(0,9) === 'ethereum:') {
+                    let address = result.text.slice(9,51);
+                    checkNfts(address);
+                    setAddress(address)
+                }
+
+            }
+        }
+
+    }
     const modalStyles = {
         overlay: {
             alignSelf: 'center',
@@ -74,18 +112,10 @@ const Home = () => {
             alignItems: 'center'
         }}>
             <WagmiConfig client={client}>
-                <Profile />
+                <Profile/>
             </WagmiConfig>
             <QrReader
-                onResult={(result, error) => {
-                    if (!!result) {
-                        setOpen(true);
-                        console.log('scanned: ', result?.text);
-                        setData(result);
-                    }
-
-                    console.log('scanned: ', result)
-                }}
+                onResult={onScan}
                 style={{ height: '100%', width: '100%' }}
             >
             </QrReader>
@@ -98,6 +128,9 @@ const Home = () => {
                     isOpen={isOpen}
                     style={modalStyles}
                 >
+                    <button onClick={toggleModal}>
+                        Close
+                    </button>
                     <div style={{margin: 20}}>
                         {isNftOwner ?
                             <Lottie
@@ -113,15 +146,7 @@ const Home = () => {
                                     isPaused={isPaused}/>
                         }
                     </div>
-                    <button onClick={toggleModal}>
-                        Close Modal
-                    </button>
-                    <button onClick={() => setNftOwner(false)}>
-                        Set Error
-                    </button>
-                    <button onClick={() => setNftOwner(true)}>
-                        Set As Owner
-                    </button>
+
                 </Modal>
 
             </CSSTransition>
