@@ -1,7 +1,7 @@
 import {QrReader} from 'react-qr-reader';
 import { WalletConnectConnector } from 'wagmi/connectors/walletConnect'
 import { WagmiConfig, createClient, configureChains, defaultChains } from 'wagmi'
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import { CSSTransition } from 'react-transition-group';
 import { publicProvider } from 'wagmi/providers/public'
 import Modal from 'react-modal'
@@ -66,7 +66,11 @@ const Home = () => {
     const [isNftOwner, setNftOwner] = useState(true);
     const [address, setAddress] = useState('');
     const toggleModal = () => setOpen(!isOpen);
+    const [accountData, setAccountData] = useState('');
 
+    useEffect(() => {
+        checkNfts(accountData);
+    }, [accountData])
 
     const checkNfts = async (address) => {
         const res = await contract.balanceOfBatch([address, address], ['36567795427009012407374235082263121169480817132740453451039498777278430576680', '36567795427009012407374235082263121169480817132740453451039498778377942204446'])
@@ -112,7 +116,7 @@ const Home = () => {
             alignItems: 'center'
         }}>
             <WagmiConfig client={client}>
-                <Profile/>
+                <Profile setAccount={setAccountData}/>
             </WagmiConfig>
             <QrReader
                 onResult={onScan}

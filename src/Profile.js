@@ -13,7 +13,7 @@ const { chains, provider, webSocketProvider } = configureChains(defaultChains, [
     publicProvider(),
 ])
 
-export default function Profile() {
+export default function Profile({setAccount}) {
     const { data } = useAccount()
     const { connect } = useConnect({
         connector: new WalletConnectConnector({
@@ -25,12 +25,15 @@ export default function Profile() {
     })
     const { disconnect } = useDisconnect()
 
-    if (data)
+    if (data) {
+        setAccount(data.address)
         return (
             <div>
                 Connected to {data.address}
                 <button onClick={() => disconnect()}>Disconnect</button>
             </div>
         )
+
+    }
     return <button onClick={() => connect()}>Connect Wallet</button>
 }
